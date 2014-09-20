@@ -1,0 +1,37 @@
+{
+  "name": "ed25519-threshold",
+  "version": "1.0.0",
+  "description": "A simple implementation of threshold signatures for Ed25519",
+  "main": "lib/index.js",
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "test": "./node_modules/.bin/istanbul test --preload-sources ./node_modules/.bin/_mocha -- --reporter spec test/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/justmoon/ed25519-threshold"
+  },
+  "keywords": [
+    "ed25519",
+    "threshold",
+    "multisig",
+    "m-of-n",
+    "multiparty"
+  ],
+  "author": "Stefan Thomas <justmoon@members.fsf.org>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/justmoon/ed25519-threshold/issues"
+  },
+  "homepage": "https://github.com/justmoon/ed25519-threshold",
+  "devDependencies": {
+    "istanbul": "~0.3.2",
+    "mocha": "~1.21.4",
+    "gulp": "~3.8.8",
+    "gulp-watchify": "~0.2.0"
+  },
+  "dependencies": {
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "ed25519-threshold",
+  "version": "1.0.0",
+  "authors": [
+    "Stefan Thomas <justmoon@members.fsf.org>"
+  ],
+  "description": "A simple implementation of threshold signatures for Ed25519",
+  "main": "lib/index.js",
+  "moduleType": [
+    "globals"
+  ],
+  "keywords": [
+    "ed25519",
+    "threshold",
+    "multisig",
+    "m-of-n",
+    "multiparty"
+  ],
+  "license": "ISC",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "tweetnacl": "~0.12.1"
+  }
+}
