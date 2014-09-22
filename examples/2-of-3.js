@@ -75,8 +75,8 @@ function factorial(num) {
   return value;
 }
 
-function calcOmega(playerX, players) {
-  var result = 1;
+function calcOmega(playerX, players, delta) {
+  var result = delta;
 
   for (var i = 0, l = players.length; i < l; i++) {
     if (players[i] !== playerX) {
@@ -94,9 +94,11 @@ function calcOmega(playerX, players) {
 }
 
 Dealer.combineShares = function (playerCount, players, shares) {
+  var delta = factorial(playerCount);
+
   var secret = gf([0]), share = gf();
   for (var i = 0; i < players.length; i++) {
-    var omega = calcOmega(players[i], players),
+    var omega = calcOmega(players[i], players, delta),
         omegaBig = gf([omega]);
     if (omega < 0) {
       car25519(omegaBig);
@@ -108,6 +110,10 @@ Dealer.combineShares = function (playerCount, players, shares) {
     A(secret, secret, share);
   }
 
+  var deltaInv = gf([delta]);
+  inv25519(deltaInv, deltaInv);
+  M(secret, secret, deltaInv);
+
   var secretPacked = new Uint8Array(32);
   pack25519(secretPacked, secret);
   console.log(hex(secretPacked));
@@ -116,5 +122,5 @@ Dealer.combineShares = function (playerCount, players, shares) {
 var keyPair = nacl.sign.keyPair();
 secretKey = keyPair.secretKey;
 console.log("Secret:", hex(secretKey.subarray(0, 32)));
-var shares = Dealer.dealShares(secretKey, 2, 3);
-Dealer.combineShares(3, [1, 2], [shares, shares.subarray(32)]);
+var shares = Dealer.dealShares(secretKey, 4, 7);
+Dealer.combineShares(7, [1, 3, 5, 6], [shares, shares.subarray((3-1) * 32), shares.subarray((5-1) * 32), shares.subarray((6-1) * 32)]);
