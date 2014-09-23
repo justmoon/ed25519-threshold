@@ -750,24 +750,34 @@ function crypto_sign(sm, m, n, sk) {
   var i, j, x = new Float64Array(64);
   var p = [gf(), gf(), gf(), gf()];
 
+  // To get the secret key (d) from the secret (sk) we hash the secret and take
+  // the first 32 bytes of the hash with some bits modified.
   crypto_hash(d, sk, 32);
   d[0] &= 248;
   d[31] &= 127;
   d[31] |= 64;
 
+  // Copy the message and the seed into sm
   var smlen = n + 64;
   for (i = 0; i < n; i++) sm[64 + i] = m[i];
   for (i = 0; i < 32; i++) sm[32 + i] = d[32 + i];
 
+  // Hash the message with the seed
   crypto_hash(r, sm.subarray(32), n+32);
   reduce(r);
+
+  // Get the point corresponding to the secret seed
   scalarbase(p, r);
+
+  // Pack the point corresponding to the secret seed into sm
   pack(sm, p);
 
+  // Hash the point, public key and message
   for (i = 32; i < 64; i++) sm[i] = sk[i];
   crypto_hash(h, sm, n + 64);
   reduce(h);
 
+  // Calculate the signature
   for (i = 0; i < 64; i++) x[i] = 0;
   for (i = 0; i < 32; i++) x[i] = r[i];
   for (i = 0; i < 32; i++) {
