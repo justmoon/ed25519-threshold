@@ -843,13 +843,17 @@ function crypto_sign_open(m, sm, n, pk) {
   for (i = 0; i < 32; i++) m[i+32] = pk[i];
   crypto_hash(h, m, n);
   reduce(h);
+  // P = hxG
   scalarmult(p, q, h);
 
+  // Q = sigmaG
   scalarbase(q, sm.subarray(32));
+  // P = eG+hxG+hxG
   add(p, q);
   pack(t, p);
 
   n -= 64;
+  // eG = eG+hxG+hxG
   if (crypto_verify_32(sm, 0, t, 0)) {
     for (i = 0; i < n; i++) m[i] = 0;
     return -1;
