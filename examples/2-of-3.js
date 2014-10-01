@@ -299,6 +299,10 @@ var keyPair = nacl.sign.keyPair();
 //var publicKey = keyPair.publicKey;
 var secretKey = new Uint8Array(32);
 pack25519(secretKey, gf([3]));
+randombytes(secretKey, 32);
+secretKey[0] &= 248;
+secretKey[31] &= 127;
+secretKey[31] |= 64;
 var publicKey = new Uint8Array(32);
 var p = [gf(), gf(), gf(), gf()];
 scalarbase(p, secretKey);
@@ -306,16 +310,20 @@ pack(publicKey, p);
 console.log("Secret key:", hex(secretKey.subarray(0, 32)));
 console.log("Public key:", hex(publicKey.subarray(0, 32)));
 var shares = Dealer.dealShares(secretKey, 2, 3);
-var reconstructedSecret = Dealer.combineShares(3, [1, 2], [shares, shares.subarray(32)]);
-console.log("Reconstructed secret:", hex(reconstructedSecret));
+var recombinedSecret = Dealer.combineShares(3, [1, 2], [shares, shares.subarray(32)]);
+console.log("Reconstructed key:", hex(recombinedSecret));
 
 // Players 1, 2, 3, 4, 5, 6, 7 want to sign a message. First they create a
 // shared secret...
 var ephemeralKeyPair = nacl.sign.keyPair();
-var ephemeralSecretKey = ephemeralKeyPair.secretKey;
+//var ephemeralSecretKey = ephemeralKeyPair.secretKey;
 //var ephemeralPublicKey = ephemeralKeyPair.publicKey;
-//var ephemeralSecretKey = new Uint8Array(32);
+var ephemeralSecretKey = new Uint8Array(32);
 //pack25519(ephemeralSecretKey, gf([22]));
+randombytes(ephemeralSecretKey, 32);
+ephemeralSecretKey[0] &= 248;
+ephemeralSecretKey[31] &= 127;
+ephemeralSecretKey[31] |= 64;
 var ephemeralPublicKey = new Uint8Array(32);
 var p = [gf(), gf(), gf(), gf()];
 scalarbase(p, ephemeralSecretKey);
