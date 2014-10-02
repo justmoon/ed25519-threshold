@@ -167,9 +167,7 @@ function signWithShare(signature, message, share, ephemeralShare, publicKey, eph
   for (i = 0; i < 32; i++) hashBuffer[32 + i] = publicKey[i];
   for (i = 0; i < message.length; i++) hashBuffer[64 + i] = message[i];
   crypto_hash(h, hashBuffer, message.length + 64);
-  crypto_hash(h, hashBuffer.subarray(32), message.length + 32);
   reduce(h);
-  //pack25519(h, gf([200]));
   hashStorage = h;
   console.log("Our hash:", hex(h.subarray(0, 32)));
 
@@ -229,7 +227,6 @@ function verifySignatureInner(m, sm, n, pk) {
   for (i = 0; i < n; i++) m[i] = sm[i];
   for (i = 0; i < 32; i++) m[i+32] = pk[i];
   crypto_hash(h, m, n);
-  crypto_hash(h, m.subarray(32), n-32);
   reduce(h);
   //pack25519(h, gf([200]));
   console.log("Their hash:", hex(h.subarray(0, 32)));
@@ -375,5 +372,11 @@ for (i = 0; i < 32; i++) signature[32 + i] = nativeSigma[i];
 var nativeValid = verifySignature(message, signature, publicKey);
 for (i = 0; i < 32; i++) signature[32 + i] = signatureSigma[i];
 var actualValid = verifySignature(message, signature, publicKey);
+var signedMessage = new Uint8Array(64 + message.length);
+for (i = 0; i < 32; i++) signature[i] = ephemeralPublicKey[i];
+for (i = 0; i < 32; i++) signature[32 + i] = signatureSigma[i];
+for (i = 0; i < message.length; i++) signature[64 + i] = message[i];
+var tweetnaclValid = nacl.sign.open(signedMessage, publicKey);
 console.log("Native valid:", nativeValid);
 console.log("Actual valid:", actualValid);
+console.log("TweetNaCl valid:", actualValid);
