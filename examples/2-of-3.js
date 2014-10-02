@@ -1,3 +1,10 @@
+var sjcl = require('./sjcl');
+var fs = require('fs');
+var path = require('path');
+var btoa = require('btoa');
+var body = fs.readFileSync(path.resolve(__dirname, 'nacl-exposed.js'), {encoding:'utf8'});
+eval.call(global, body);
+
 var X2 = gf([0x4a40, 0xdb3a, 0x2f2a, 0x6b99, 0xafb7, 0x82a1, 0xdc19, 0x38ab, 0x4cbb, 0x3237, 0x85e5, 0xf785, 0xcc84, 0xa81b, 0xc1da, 0x106e]),
     Y2 = gf([0x8c84, 0x4370, 0xeab4, 0x2ddb, 0xc43f, 0xc544, 0xde8, 0xada4, 0x4773, 0x23f1, 0xf746, 0xc28c, 0xa097, 0x750f, 0x846b, 0x223a]);
 
@@ -292,36 +299,20 @@ function verifySignatureInner(m, sm, n, pk) {
 var bnL = hexToBn("1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed");
 
 // A secret is shared among 7 players, four are needed to sign
-var keyPair = nacl.sign.keyPair();
-//var secretKey = keyPair.secretKey;
-//var publicKey = keyPair.publicKey;
-var secretKey = new Uint8Array(32);
-//pack25519(secretKey, gf([3]));
-randombytes(secretKey, 32);
-secretKey[0] &= 248;
-secretKey[31] &= 127;
-secretKey[31] |= 64;
+var secretKey = bnToU8(sjcl.bn.random(bnL, 0));
 var publicKey = new Uint8Array(32);
 var p = [gf(), gf(), gf(), gf()];
 scalarbase(p, secretKey);
 pack(publicKey, p);
 var shares = Dealer.dealShares(secretKey, 2, 3);
-var recombinedSecret = Dealer.combineShares(3, [1, 2], [shares, shares.subarray(32)]);
+var recombinedSecret = Dealer.combineShares(3, [1, 2], [shares, shares.subarray(32)], bnL);
 console.log("Secret key:       ", hex(secretKey.subarray(0, 32)));
 console.log("Reconstructed key:", hex(recombinedSecret));
 console.log("Public key:", hex(publicKey.subarray(0, 32)));
 
 // Players 1, 2, 3, 4, 5, 6, 7 want to sign a message. First they create a
 // shared secret...
-var ephemeralKeyPair = nacl.sign.keyPair();
-//var ephemeralSecretKey = ephemeralKeyPair.secretKey;
-//var ephemeralPublicKey = ephemeralKeyPair.publicKey;
-var ephemeralSecretKey = new Uint8Array(32);
-//pack25519(ephemeralSecretKey, gf([1]));
-randombytes(ephemeralSecretKey, 32);
-ephemeralSecretKey[0] &= 248;
-ephemeralSecretKey[31] &= 127;
-ephemeralSecretKey[31] |= 64;
+var ephemeralSecretKey = bnToU8(sjcl.bn.random(bnL, 0));
 var ephemeralPublicKey = new Uint8Array(32);
 var p = [gf(), gf(), gf(), gf()];
 scalarbase(p, ephemeralSecretKey);
@@ -344,22 +335,8 @@ var bnSigma = u8ToBn(secretKey).mul(u8ToBn(hashStorage)).add(u8ToBn(ephemeralSec
 var expectedSigma = bnToU8(bnSigma);
 console.log('Expected sigma:', hex(expectedSigma));
 
-var nativeSigma = new Uint8Array(32);
-var x = new Float64Array(64);
-for (i = 0; i < 64; i++) x[i] = 0;
-for (i = 0; i < 32; i++) x[i] = ephemeralSecretKey[i];
-for (i = 0; i < 32; i++) {
-  for (j = 0; j < 32; j++) {
-    x[i+j] += hashStorage[i] * secretKey[j];
-  }
-}
-modL(nativeSigma, x);
-console.log('Native sigma:  ', hex(nativeSigma));
-
 var signature = new Uint8Array(64);
 for (i = 0; i < 32; i++) signature[i] = ephemeralPublicKey[i];
-for (i = 0; i < 32; i++) signature[32 + i] = nativeSigma[i];
-var nativeValid = verifySignature(message, signature, publicKey);
 for (i = 0; i < 32; i++) signature[32 + i] = signatureSigma[i];
 var actualValid = verifySignature(message, signature, publicKey);
 var signedMessage = new Uint8Array(64 + message.length);
@@ -367,9 +344,16 @@ for (i = 0; i < 32; i++) signedMessage[i] = ephemeralPublicKey[i];
 for (i = 0; i < 32; i++) signedMessage[32 + i] = signatureSigma[i];
 for (i = 0; i < message.length; i++) signedMessage[64 + i] = message[i];
 var tweetnaclValid = nacl.sign.open(signedMessage, publicKey);
-console.log("Native valid:", nativeValid);
 console.log("Actual valid:", actualValid);
 console.log("TweetNaCl valid:", !!tweetnaclValid);
 
 // Poor man's fuzzing
-//if (!!tweetnaclValid) location.reload();
+if (actualValid &&
+    tweetnaclValid &&
+    hex(secretKey) === hex(recombinedSecret) &&
+    hex(signatureSigma) === hex(expectedSigma)) {
+  // TODO: Run again
+} else {
+  console.log("Invalid!");
+  process.exit(0);
+}

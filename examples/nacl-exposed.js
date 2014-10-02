@@ -882,7 +882,7 @@ var crypto_secretbox_KEYBYTES = 32,
     crypto_sign_SEEDBYTES = 32,
     crypto_hash_BYTES = 64;
 
-window.nacl = {};
+global.nacl = {};
 
 nacl.lowlevel = {
   crypto_core_hsalsa20: crypto_core_hsalsa20,
