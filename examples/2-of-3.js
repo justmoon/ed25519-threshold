@@ -90,7 +90,7 @@ Dealer.dealShares = function (secret, threshold, playerCount) {
     }
   }
 
-  console.log("Shares", hex(shares).replace(/(.{64})/g, '$1 '));
+  console.log("Shares\n" + hex(shares).replace(/(.{64})(?!$)/g, '$1\n'));
 
   return shares;
 };
@@ -228,60 +228,16 @@ function verifySignatureInner(m, sm, n, pk) {
   crypto_hash(h, m, n);
   reduce(h);
 
-  var h25519 = gf();
-  var x25519 = gf();
-  var hx25519 = gf();
-  var hx = new Uint8Array(32);
-  var x = new Uint8Array(32);
-  unpack25519(h25519, h);
-  unpack25519(x25519, secretKey);
-  M(hx25519, h25519, x25519);
-  pack25519(hx, hx25519);
-  pack25519(x, x25519);
-  console.log("h =", hex(h.subarray(0, 32)));
-  console.log("x =", hex(secretKey));
-  console.log("hx =", hex(hx));
-
-  // Q_test = xG
-  var qTest = [gf(), gf(), gf(), gf()];
-  scalarbase(qTest, x);
-
-  var qAsY = new Uint8Array(32);
-  pack(qAsY, q);
-  console.log("-xG =", hex(qAsY));
-
-  var qTestAsY = new Uint8Array(32);
-  pack(qTestAsY, qTest);
-  console.log("xG_test =", hex(qTestAsY));
-
   // P = hxG
   scalarmult(p, q, h);
 
-  // P_test = hxG
-  var pTest = [gf(), gf(), gf(), gf()];
-  scalarbase(pTest, hx);
-
-  var pAsY = new Uint8Array(32);
-  pack(pAsY, p);
-  console.log("-hxG =", hex(pAsY));
-
-  var pTestAsY = new Uint8Array(32);
-  pack(pTestAsY, pTest);
-  console.log("hxG_test =", hex(pTestAsY));
-
   // Q = sigmaG
   scalarbase(q, sm.subarray(32));
-
-  var qAsY = new Uint8Array(32);
-  pack(qAsY, q);
-  console.log("sigmaG =", hex(qAsY));
 
   add(p, q);
 
   // t = eG + hxG - hxG
   pack(t, p);
-
-  console.log("We have:   "+hex(sm.subarray(0, 32)) + "\n" + "They want: "+hex(t));
 
   // e * G = e * G + hxG - hxG
   n -= 64;
@@ -298,62 +254,66 @@ function verifySignatureInner(m, sm, n, pk) {
 // group order in sjcl-compatible format
 var bnL = hexToBn("1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed");
 
-// A secret is shared among 7 players, four are needed to sign
-var secretKey = bnToU8(sjcl.bn.random(bnL, 0));
-var publicKey = new Uint8Array(32);
-var p = [gf(), gf(), gf(), gf()];
-scalarbase(p, secretKey);
-pack(publicKey, p);
-var shares = Dealer.dealShares(secretKey, 2, 3);
-var recombinedSecret = Dealer.combineShares(3, [1, 2], [shares, shares.subarray(32)], bnL);
-console.log("Secret key:       ", hex(secretKey.subarray(0, 32)));
-console.log("Reconstructed key:", hex(recombinedSecret));
-console.log("Public key:", hex(publicKey.subarray(0, 32)));
+function run() {
+  // A secret is shared among 7 players, four are needed to sign
+  var secretKey = bnToU8(sjcl.bn.random(bnL, 0));
+  var publicKey = new Uint8Array(32);
+  var p = [gf(), gf(), gf(), gf()];
+  scalarbase(p, secretKey);
+  pack(publicKey, p);
+  var shares = Dealer.dealShares(secretKey, 2, 3);
+  var recombinedSecret = Dealer.combineShares(3, [1, 2], [shares, shares.subarray(32)], bnL);
+  console.log("Secret key:       ", hex(secretKey.subarray(0, 32)));
+  console.log("Reconstructed key:", hex(recombinedSecret));
+  console.log("Public key:", hex(publicKey.subarray(0, 32)));
 
-// Players 1, 2, 3, 4, 5, 6, 7 want to sign a message. First they create a
-// shared secret...
-var ephemeralSecretKey = bnToU8(sjcl.bn.random(bnL, 0));
-var ephemeralPublicKey = new Uint8Array(32);
-var p = [gf(), gf(), gf(), gf()];
-scalarbase(p, ephemeralSecretKey);
-pack(ephemeralPublicKey, p);
-console.log("Secret ephemeral:", hex(ephemeralSecretKey.subarray(0, 32)));
-console.log("Public ephemeral:", hex(ephemeralPublicKey.subarray(0, 32)));
-var ephemeralShares = Dealer.dealShares(ephemeralSecretKey, 2, 3);
+  // Players 1, 2, 3, 4, 5, 6, 7 want to sign a message. First they create a
+  // shared secret...
+  var ephemeralSecretKey = bnToU8(sjcl.bn.random(bnL, 0));
+  var ephemeralPublicKey = new Uint8Array(32);
+  var p = [gf(), gf(), gf(), gf()];
+  scalarbase(p, ephemeralSecretKey);
+  pack(ephemeralPublicKey, p);
+  console.log("Secret ephemeral:", hex(ephemeralSecretKey.subarray(0, 32)));
+  console.log("Public ephemeral:", hex(ephemeralPublicKey.subarray(0, 32)));
+  var ephemeralShares = Dealer.dealShares(ephemeralSecretKey, 2, 3);
 
 
-var message = stringToUint("Hello world!");
-var signatures = new Uint8Array(32 * 2);
-signWithPlayers(signatures, [1, 2], message, shares, ephemeralShares, publicKey, ephemeralPublicKey);
-console.log("Signatures", hex(signatures).replace(/(.{64})/g, '$1 '));
+  var message = stringToUint("Hello world!");
+  var signatures = new Uint8Array(32 * 2);
+  signWithPlayers(signatures, [1, 2], message, shares, ephemeralShares, publicKey, ephemeralPublicKey);
+  console.log("Signature shares\n" + hex(signatures).replace(/(.{64})(?!$)/g, '$1\n'));
 
-// Combine signatures
-var signatureSigma = Dealer.combineShares(3, [1, 2], [signatures, signatures.subarray(32)], bnL);
-console.log("Sigma:         ", hex(signatureSigma));
+  // Combine signatures
+  var signatureSigma = Dealer.combineShares(3, [1, 2], [signatures, signatures.subarray(32)], bnL);
+  console.log("Sigma:         ", hex(signatureSigma));
 
-var bnSigma = u8ToBn(secretKey).mul(u8ToBn(hashStorage)).add(u8ToBn(ephemeralSecretKey)).mod(bnL);
-var expectedSigma = bnToU8(bnSigma);
-console.log('Expected sigma:', hex(expectedSigma));
+  var bnSigma = u8ToBn(secretKey).mul(u8ToBn(hashStorage)).add(u8ToBn(ephemeralSecretKey)).mod(bnL);
+  var expectedSigma = bnToU8(bnSigma);
+  console.log('Expected sigma:', hex(expectedSigma));
 
-var signature = new Uint8Array(64);
-for (i = 0; i < 32; i++) signature[i] = ephemeralPublicKey[i];
-for (i = 0; i < 32; i++) signature[32 + i] = signatureSigma[i];
-var actualValid = verifySignature(message, signature, publicKey);
-var signedMessage = new Uint8Array(64 + message.length);
-for (i = 0; i < 32; i++) signedMessage[i] = ephemeralPublicKey[i];
-for (i = 0; i < 32; i++) signedMessage[32 + i] = signatureSigma[i];
-for (i = 0; i < message.length; i++) signedMessage[64 + i] = message[i];
-var tweetnaclValid = nacl.sign.open(signedMessage, publicKey);
-console.log("Actual valid:", actualValid);
-console.log("TweetNaCl valid:", !!tweetnaclValid);
+  var signature = new Uint8Array(64);
+  for (i = 0; i < 32; i++) signature[i] = ephemeralPublicKey[i];
+  for (i = 0; i < 32; i++) signature[32 + i] = signatureSigma[i];
+  var actualValid = verifySignature(message, signature, publicKey);
+  var signedMessage = new Uint8Array(64 + message.length);
+  for (i = 0; i < 32; i++) signedMessage[i] = ephemeralPublicKey[i];
+  for (i = 0; i < 32; i++) signedMessage[32 + i] = signatureSigma[i];
+  for (i = 0; i < message.length; i++) signedMessage[64 + i] = message[i];
+  var tweetnaclValid = nacl.sign.open(signedMessage, publicKey);
+  console.log("Actual valid:", actualValid);
+  console.log("TweetNaCl valid:", !!tweetnaclValid);
 
-// Poor man's fuzzing
-if (actualValid &&
-    tweetnaclValid &&
-    hex(secretKey) === hex(recombinedSecret) &&
-    hex(signatureSigma) === hex(expectedSigma)) {
-  // TODO: Run again
-} else {
-  console.log("Invalid!");
-  process.exit(0);
+  // Poor man's fuzzing
+  if (actualValid &&
+      tweetnaclValid &&
+      hex(secretKey) === hex(recombinedSecret) &&
+      hex(signatureSigma) === hex(expectedSigma)) {
+    setImmediate(run);
+  } else {
+    console.log("Invalid!");
+    process.exit(0);
+  }
 }
+
+run();
