@@ -254,6 +254,7 @@ function verifySignatureInner(m, sm, n, pk) {
 // group order in sjcl-compatible format
 var bnL = hexToBn("1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed");
 
+var unique = 0;
 function run() {
   // A secret is shared among 7 players, four are needed to sign
   var secretKey = bnToU8(sjcl.bn.random(bnL, 0));
@@ -279,7 +280,7 @@ function run() {
   var ephemeralShares = Dealer.dealShares(ephemeralSecretKey, 2, 3);
 
 
-  var message = stringToUint("Hello world!");
+  var message = stringToUint("Hello world "+(unique++)+"!");
   var signatures = new Uint8Array(32 * 2);
   signWithPlayers(signatures, [1, 2], message, shares, ephemeralShares, publicKey, ephemeralPublicKey);
   console.log("Signature shares\n" + hex(signatures).replace(/(.{64})(?!$)/g, '$1\n'));
